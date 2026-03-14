@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control Estelar</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; min-height: 100vh; overflow: hidden; background: var(--bg-color); }
+        .dashboard-layout { display: flex; height: 100vh; width: 100%; }
+        .sidebar { width: 300px; padding: 30px 20px; text-align: center; border-right: 1px solid var(--glass-border); background: var(--glass-bg); backdrop-filter: blur(12px); display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; overflow-y: auto; }
+        .main-content { flex-grow: 1; padding: 20px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        .visor-holografico { flex-grow: 1; border: 2px solid var(--user-color); border-radius: 15px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 30px rgba(0,0,0,0.8); overflow: hidden; }
+        
+        /* Ocultar barra de scroll en el sidebar para que se vea limpio */
+        .sidebar::-webkit-scrollbar { display: none; }
+        .sidebar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .nav-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.3s; width: 100%; margin-bottom: 8px; font-family: 'Rajdhani', sans-serif; font-size: 1.1em; text-transform: uppercase; display: flex; align-items: center; justify-content: left; gap: 10px; }
+        .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,0.1); border-color: var(--user-color); box-shadow: 0 0 15px var(--user-color); color: var(--user-color); font-weight: bold; transform: translateX(5px); }
+        .progress-container { background: rgba(0,0,0,0.6); border-radius: 10px; height: 15px; margin: 15px 0; border: 1px solid var(--glass-border); }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--user-color, #00f2ff), #ffffff); width: 0%; transition: width 1s ease-in-out; }
+        .seccion-titulo { color: #aaa; font-size: 0.8em; text-align: left; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        
+        <div class="sidebar" id="user-theme">
+            <h2 id="u-name" style="font-family: 'Orbitron', sans-serif; font-size: 1.8em; margin: 0 0 5px 0;">Cargando...</h2>
+            <p id="u-role" style="color: #aaa; margin: 0 0 15px 0; font-size: 0.9em; text-transform: uppercase; letter-spacing: 2px;"></p>
+            
+            <div class="progress-container"><div id="xp-bar" class="progress-fill"></div></div>
+            <p id="u-pts" style="font-size: 1.5em; font-family: 'Orbitron', sans-serif; margin: 5px 0 15px 0; text-shadow: 0 0 10px var(--user-color);">XP: 0</p>
+            <hr style="border: 1px solid rgba(255,255,255,0.1); width: 100%; margin-bottom: 10px;">
+            
+            <p class="seccion-titulo">🎨 Estudios de Arte</p>
+            <button id="btn-paint-clasico" class="nav-btn active" onclick="cambiarModulo('modulos/paint_clasico.html', 'btn-paint-clasico')">🖌️ Paint Clásico</button>
+            <button id="btn-paint-pro" class="nav-btn" onclick="cambiarModulo('modulos/paint_pro.html', 'btn-paint-pro')">✨ Kleki (Avanzado)</button>
+            <button id="btn-pixel-art" class="nav-btn" onclick="cambiarModulo('modulos/pixel_art.html', 'btn-pixel-art')">👾 Creador Pixel Art</button>
+            <button id="btn-anime" class="nav-btn" onclick="cambiarModulo('modulos/anime_creator.html', 'btn-anime')" style="border-color: #00ff88; color: #00ff88;">🌸 Creador Anime</button>
+            
+            <p class="seccion-titulo">🎵 Laboratorios</p>
+            <button id="btn-musica" class="nav-btn" onclick="cambiarModulo('modulos/musica.html', 'btn-musica')" style="border-color: #b000ff; color: #b000ff;">🎹 Sintetizador</button>
+
+            <p class="seccion-titulo">🕹️ Retos y Juegos</p>
+            <button id="btn-arcade" class="nav-btn" onclick="cambiarModulo('modulos/arcade.html', 'btn-arcade')" style="border-color: #ff0055; color: #ff0055;">🎮 Mega Arcade</button>
+            <button id="btn-puzzle" class="nav-btn" onclick="cambiarModulo('modulos/puzzle.html', 'btn-puzzle')">🧩 Rompecabezas</button>
+            
+            <button class="nav-btn" onclick="canjearPremio()" style="margin-top: 25px; border-color: gold; color: gold;">🎁 Tienda de Recompensas</button>
+            
+            <div style="margin-top: 20px;">
+                <button class="nav-btn" onclick="location.href='index.html'" style="border-color: #ff0055; color: #ff0055; justify-content: center;">🚪 Desconectar</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <iframe class="visor-holografico" src="modulos/paint_clasico.html" frameborder="0" width="100%" height="100%"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const u = params.get('u') || 'peque';
+        const config = {
+            'papa':  { n: 'Papá', r: 'Comandante', p: 9999, color: 'var(--papa)' },
+            'mama':  { n: 'Mamá', r: 'Directora', p: 9999, color: 'var(--mama)' },
+            'hija':  { n: 'La Artista', r: 'Especialista', p: 200, color: 'var(--hija)' },
+            'hijo':  { n: 'Code Kid', r: 'Ingeniero', p: 350, color: 'var(--hijo)' },
+            'peque': { n: 'El Gordito', r: 'Explorador', p: 100, color: 'var(--peque)' }
+        };
+
+        const current = config[u];
+        document.documentElement.style.setProperty('--user-color', current.color);
+        if(!localStorage.getItem('pts_'+u)) localStorage.setItem('pts_'+u, current.p);
+
+        function updateUI() {
+            const pts = parseInt(localStorage.getItem('pts_'+u));
+            const apodo = localStorage.getItem('apodo_'+u) || current.n;
+            document.getElementById('u-name').innerText = apodo;
+            document.getElementById('u-role').innerText = current.r;
+            document.getElementById('u-pts').innerText = `XP: ${pts}`;
+            document.getElementById('xp-bar').style.width = Math.min((pts / 1000) * 100, 100) + '%';
+        }
+
+        function cambiarModulo(ruta, idBoton) {
+            document.querySelector('.visor-holografico').src = ruta;
+            const botones = document.querySelectorAll('.nav-btn');
+            botones.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(idBoton).classList.add('active');
+        }
+
+        function canjearPremio() {
+            Swal.fire({ title: 'Tienda de Recompensas', text: '¡Pronto agregaremos los premios reales!', icon: 'info', background: '#0a0a19', color: '#fff', confirmButtonColor: current.color });
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
